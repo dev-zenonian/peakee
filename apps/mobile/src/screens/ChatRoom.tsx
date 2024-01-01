@@ -11,7 +11,7 @@ const ChatRoomScreen = () => {
 	const route = useRoute();
 	const navigation = useNavigation();
 	const { roomId } = route.params as never;
-	const [incomingMessages, setIncomingMessages] = useState<Message[]>([]);
+	const [recentMessages, setRecentMessages] = useState<Message[]>([]);
 
 	const room = useSelector((state: RootState) => state.chat[roomId]);
 	const user = useSelector((state: RootState) => state.user.chatData);
@@ -47,11 +47,10 @@ const ChatRoomScreen = () => {
 	}
 
 	useEffect(() => {
-		const lastMessage = room.messages[room.messages.length - 1];
-		if (lastMessage.senderId !== user?.id) {
-			setIncomingMessages([...incomingMessages, lastMessage]);
+		if (room.messages.length > 5) {
+			setRecentMessages(room.messages.slice(-5));
 		} else {
-			setIncomingMessages([]);
+			setRecentMessages(room.messages);
 		}
 	}, [room.messages]);
 
@@ -65,9 +64,7 @@ const ChatRoomScreen = () => {
 			onPressBack={handleGoBack}
 			sendMessage={handleSendMessage}
 		>
-			<Suggestions
-				incomingMessages={incomingMessages.map((ele) => ele.content)}
-			/>
+			<Suggestions recentMessages={recentMessages} />
 		</ChatBox>
 	);
 };

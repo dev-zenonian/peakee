@@ -1,19 +1,20 @@
 import type { FC } from 'react';
-import { Fragment, useEffect } from 'react';
-import { useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import type { Message } from '@peakee/db/types';
 import { GPT } from '@peakee/icons';
+import { handleGetIdToken } from '@peakee/utils';
 import { throttle } from 'lodash';
 
-import { getSuggestions } from '../../utils/gpt';
+import { getChatSuggestion } from '../../utils/suggest';
 
 import { SuggestionsBox } from './components';
 
 interface Props {
-	incomingMessages?: string[];
+	recentMessages: Message[];
 }
 
-export const Suggestions: FC<Props> = ({ incomingMessages }) => {
+export const Suggestions: FC<Props> = ({ recentMessages }) => {
 	const [suggestions, setSuggestions] = useState<string[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [open, setOpen] = useState(true);
@@ -23,10 +24,19 @@ export const Suggestions: FC<Props> = ({ incomingMessages }) => {
 			setOpen((value) => !value);
 		} else {
 			setLoading(true);
-			const messagesCount = incomingMessages?.length || 0;
+			const token = await handleGetIdToken();
+			if (!token) {
+				console.log('empty token');
+				setLoading(false);
+				return;
+			}
+			const messagesCount = recentMessages?.length || 0;
 			if (messagesCount > 0) {
-				const res = await getSuggestions(incomingMessages as string[]);
-				setSuggestions(res);
+				const suggestions = await getChatSuggestion(
+					recentMessages,
+					token,
+				);
+				setSuggestions(suggestions);
 			} else {
 				console.log('empty incoming messages');
 			}
@@ -37,15 +47,15 @@ export const Suggestions: FC<Props> = ({ incomingMessages }) => {
 	useEffect(() => {
 		setSuggestions([]);
 		setOpen(true);
-	}, [incomingMessages]);
+	}, [recentMessages]);
 
 	return (
 		<Fragment>
 			{((open && suggestions?.length) || 0) > 0 && (
-				<SuggestionsBox suggestions={suggestions || []} />
+				<SuggestionsBox suggestions={suggestions} />
 			)}
 
-			{(incomingMessages?.length || 0 > 0) && (
+			{(recentMessages?.length || 0 > 0) && (
 				<TouchableOpacity
 					onPress={throttle(handlePressGPT, 2000)}
 					style={styles.suggestButton}
